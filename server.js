@@ -1,10 +1,6 @@
 import express from "express";
 import fs from "node:fs/promises";
-import { createClient } from "redis";
-
-export const client = createClient({ url: process.env.REDIS_URL });
-client.on("error", (err) => console.log("Redis Client Error", err));
-await client.connect();
+import { router } from "./z/routes.js";
 
 // Constants
 const isProduction = process.env.NODE_ENV === "production";
@@ -21,6 +17,7 @@ const ssrManifest = isProduction
 
 // Create http server
 const app = express();
+app.use("/api", router);
 
 // Add Vite or respective production middlewares
 let vite;
@@ -38,15 +35,6 @@ if (!isProduction) {
   app.use(compression());
   app.use(base, sirv("./dist/client", { extensions: [] }));
 }
-
-app.use("/api", async (req, res) => {
-  const { key, value } = req.query;
-  console.log("key", key);
-  console.log("value", value);
-  await client.set(key, value);
-  const dbValue = await client.get(key);
-  res.send({ text: "Birds home page", dbValue });
-});
 
 // Serve HTML
 app.use("*", async (req, res) => {
